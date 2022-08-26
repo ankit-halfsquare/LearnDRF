@@ -9,6 +9,8 @@ from django.shortcuts import get_object_or_404
 
 from .models import Product
 from .serializers import ProductSerializer
+from .permissions import  IsStaffEditorPermission
+from api.authentication import TokenAuthentication
 
 
 
@@ -18,8 +20,12 @@ from .serializers import ProductSerializer
 class ProductListCreateAPIView(generics.ListCreateAPIView):
     queryset = Product.objects.all()                        # if request is get excute this part
     serializer_class = ProductSerializer
-    authentication_classes = [authentication.SessionAuthentication]
-    permission_classes = [permissions.DjangoModelPermissions]
+    authentication_classes = [
+                                authentication.SessionAuthentication,
+                                TokenAuthentication
+                             ]
+    permission_classes = [permissions.IsAdminUser,IsStaffEditorPermission]
+    # permission_classes = [permissions.DjangoModelPermissions]
     # permission_classes = [permissions.IsAuthenticated]
 
     # if request is post excute this part
@@ -78,16 +84,15 @@ class ProductMixingView(mixins.CreateModelMixin,
     lookup_field = 'pk'
 
     def get(self, request, *args, **kwargs):
-        print(args,kwargs)
         pk = kwargs.get('pk')
         if pk:
             return self.retrieve(request, *args, **kwargs)
         return self.list(request, *args, **kwargs)
     
-    def post(self, request, *args, **kwargs):
-        return self.create(request, *args, **kwargs)
+    def post(self, request, *args, **kwargs):      # to save data because CreateModelMixin
+        return self.create(request, *args, **kwargs)  
 
-    def perform_create(self, serializer):
+    def perform_create(self, serializer):          #optional if need any modification before save data
         # serializer.save(user=self.request.user)
         title = serializer.validated_data.get('title')
         content = serializer.validated_data.get('content') or None
